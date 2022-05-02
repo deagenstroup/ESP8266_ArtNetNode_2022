@@ -1,7 +1,7 @@
 # ESP8266_ArtNetNode_2022
 Fork of the github repo here: https://github.com/mtongnz/ESP8266_ArtNetNode_v2
 
-This version aims to update and improve upon the old repo, cleaning up the code to make it easier to custimize and work with.
+This version aims to update and improve upon the old repo, cleaning up the code to make it easier to customize and work with.
 
 ## ESP8266_ArtNetNode_v2 ##
 ESP8266 based WiFi ArtNet V4 to DMX, RDM and LED Pixels
