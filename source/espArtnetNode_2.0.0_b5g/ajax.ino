@@ -2,11 +2,9 @@
 ESP8266_ArtNetNode v2.0.0
 Copyright (c) 2016, Matthew Tong
 https://github.com/mtongnz/ESP8266_ArtNetNode_v2
-
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
 License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
 later version.
-
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with this program.
@@ -98,7 +96,7 @@ bool ajaxSave(uint8_t page, JsonObject& json) {
       deviceSettings.ip = IPAddress(json["ipAddress"][0],json["ipAddress"][1],json["ipAddress"][2],json["ipAddress"][3]);
       deviceSettings.subnet = IPAddress(json["subAddress"][0],json["subAddress"][1],json["subAddress"][2],json["subAddress"][3]);
       deviceSettings.gateway = IPAddress(json["gwAddress"][0],json["gwAddress"][1],json["gwAddress"][2],json["gwAddress"][3]);
-      deviceSettings.broadcast = deviceSettings.ip | (~deviceSettings.subnet);
+      deviceSettings.broadcast = deviceSettings.ip;// | ~(uint32_t)deviceSettings.subnet;
       //deviceSettings.broadcast = {~deviceSettings.subnet[0] | (deviceSettings.ip[0] & deviceSettings.subnet[0]), ~deviceSettings.subnet[1] | (deviceSettings.ip[1] & deviceSettings.subnet[1]), ~deviceSettings.subnet[2] | (deviceSettings.ip[2] & deviceSettings.subnet[2]), ~deviceSettings.subnet[3] | (deviceSettings.ip[3] & deviceSettings.subnet[3])};
 
       json.get<String>("nodeName").toCharArray(deviceSettings.nodeName, 18);
@@ -110,7 +108,6 @@ bool ajaxSave(uint8_t page, JsonObject& json) {
           /*
           // Re-enable DHCP
           WiFi.begin(deviceSettings.wifiSSID, deviceSettings.wifiPass);
-
           // Wait for an IP
           while (WiFi.status() != WL_CONNECTED)
             yield();
@@ -129,7 +126,6 @@ bool ajaxSave(uint8_t page, JsonObject& json) {
           // Set static IP
           WiFi.config(deviceSettings.ip,deviceSettings.ip,deviceSettings.ip,deviceSettings.subnet);
         }
-
         // Add any changes to artnet settings - this will send correct artpollreply
         artRDM.setIP(deviceSettings.ip, deviceSettings.subnet);
         artRDM.setDHCP(deviceSettings.dhcpEnable);
@@ -205,7 +201,6 @@ bool ajaxSave(uint8_t page, JsonObject& json) {
             // Close ports from pixels - library handles if they dont exist
             for (uint8_t x = 2; x <= 4; x++)
               artRDM.closePort(portA[0], portA[x]);
-
             // Start our DMX port
             dmxA.begin(DMX_DIR_A, artRDM.getDMX(portA[0], portA[1]));
             
@@ -213,31 +208,26 @@ bool ajaxSave(uint8_t page, JsonObject& json) {
             dmxA.dmxIn(false);
           else if (oldMode == TYPE_RDM_OUT)
             dmxA.rdmDisable();
-
           // Start DMX output with no DMX
           if (newMode == TYPE_DMX_OUT) {
             
             
             artRDM.setPortType(portA[0], portA[1], DMX_OUT);
-
           // Start DMX output with RDM
           } else if (newMode == TYPE_RDM_OUT) {
             dmxA.rdmEnable(ESTA_MAN, ESTA_DEV);
             dmxA.rdmSetCallBack(rdmReceivedA);
             dmxA.todSetCallBack(sendTodA);
             artRDM.setPortType(portA[0], portA[1], RDM_OUT);
-
           // Start DMX input
           } else if (newMode == TYPE_DMX_IN) {
             dmxA.dmxIn(true);
             dmxA.setInputCallback(dmxIn);
             
             artRDM.setPortType(portA[0], portA[1], DMX_IN);
-
           // Start WS2812 output
           } else if (newMode == TYPE_WS2812) {
             doReboot = true;
-
             dmxA.end();
             
             artRDM.setPortType(portA[0], portA[1], TYPE_DMX_OUT);
@@ -374,7 +364,6 @@ bool ajaxSave(uint8_t page, JsonObject& json) {
             // Close ports from pixels - library handles if they dont exist
             for (uint8_t x = 2; x <= 4; x++)
               artRDM.closePort(portB[0], portB[x]);
-
             // Start our DMX port
             dmxB.begin(DMX_DIR_B, artRDM.getDMX(portB[0], portB[1]));
             
@@ -383,22 +372,18 @@ bool ajaxSave(uint8_t page, JsonObject& json) {
             dmxB.rdmDisable();
           
           
-
           // Start DMX output with no DMX
           if (newMode == TYPE_DMX_OUT) {
             artRDM.setPortType(portB[0], portB[1], DMX_OUT);
-
           // Start DMX output with RDM
           } else if (newMode == TYPE_RDM_OUT) {
             dmxB.rdmEnable(ESTA_MAN, ESTA_DEV);
             dmxB.rdmSetCallBack(rdmReceivedB);
             dmxB.todSetCallBack(sendTodB);
             artRDM.setPortType(portB[0], portB[1], RDM_OUT);
-
           // Start WS2812 output
           } else if (newMode == TYPE_WS2812) {
             doReboot = true;
-
             
             //dmxB.end();
             artRDM.setPortType(portB[0], portB[1], TYPE_DMX_OUT);
@@ -741,4 +726,3 @@ void ajaxLoad(uint8_t page, JsonObject& jsonReply) {
       jsonReply["message"] = "Invalid or incomplete data received.";
   }
 }
-

@@ -606,4 +606,3 @@ void doStatusLedOutput() {
 void setStatusLed(uint8_t num, uint32_t col) {
   memcpy(&statusLedData[num*3], &col, 3);
 }
-
