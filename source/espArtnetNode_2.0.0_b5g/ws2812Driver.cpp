@@ -171,7 +171,7 @@ void ICACHE_RAM_ATTR ws2812Driver::doPixel(byte* data, uint8_t pin, uint16_t num
       "MEMW;"
   
       "RSR %[r_cc1], CCOUNT;"           // get clock cycles
-      "ADDI %[r_cc1], %[r_cc1], 95;"    // add to cycles for delay - works at 100
+      "ADDI %[r_cc1], %[r_cc1], 80;"    // add to cycles for delay - works at 100
 
     "SingleOneLoop:"
       "RSR %[r_cc2], CCOUNT;"                         // Get clock cycles
@@ -181,7 +181,7 @@ void ICACHE_RAM_ATTR ws2812Driver::doPixel(byte* data, uint8_t pin, uint16_t num
       "MEMW;"
       
       "RSR %[r_cc1], CCOUNT;"             // get clock cycles
-      "ADDI %[r_cc1], %[r_cc1], 61;"      // add to cycles for delay - works at 67
+      "ADDI %[r_cc1], %[r_cc1], 45;"      // add to cycles for delay - works at 67
       "BEQZ %[r_allow_int], SingleLoop;"  // if allowInt equals false, jump without enabling interrupts
       "RSIL   %[r_int], 0;"               // enable interrupts again
       "NOP;"                              // 1 clock for any interrupts to run
@@ -288,7 +288,7 @@ void ICACHE_RAM_ATTR ws2812Driver::doPixelDouble(byte* data1, uint8_t pin1, byte
       "MEMW;"
       
       "RSR %[r_cc1], CCOUNT;"             // get clock cycles
-      "ADDI %[r_cc1], %[r_cc1], 65;"      // add to cycles for delay
+      "ADDI %[r_cc1], %[r_cc1], 45;"      // add to cycles for delay
       "BEQZ %[r_allow_int], DoubleLoop;"  // if allowInt equals false, jump without enabling interrupts
       "RSIL   %[r_int], 0;"               // enable interrupts again
       "NOP;"                              // 1 clock for any interrupts to run
@@ -335,7 +335,7 @@ void ICACHE_RAM_ATTR ws2812Driver::doPixelDouble(byte* data1, uint8_t pin1, byte
       "MEMW;"
 
       "RSR %[r_cc1], CCOUNT;"             // get clock cycles
-      "ADDI %[r_cc1], %[r_cc1], 65;"      // add to cycles for delay
+      "ADDI %[r_cc1], %[r_cc1], 45;"      // add to cycles for delay
       "BEQZ %[r_allow_int], DoubleLoop;"  // if allowInt equals false, jump without enabling interrupts
       "RSIL   %[r_int], 0;"               // enable interrupts again
       "NOP;"                              // 1 clock for any interrupts to run
@@ -361,7 +361,7 @@ void ICACHE_RAM_ATTR ws2812Driver::doPixelDouble(byte* data1, uint8_t pin1, byte
       "MEMW;"
 
       "RSR %[r_cc1], CCOUNT;"             // get clock cycles
-      "ADDI %[r_cc1], %[r_cc1], 65;"      // add to cycles for delay
+      "ADDI %[r_cc1], %[r_cc1], 45;"      // add to cycles for delay
       "BEQZ %[r_allow_int], DoubleLoop;"  // if allowInt equals false, jump without enabling interrupts
       "RSIL   %[r_int], 0;"               // enable interrupts again
       "NOP;"                              // 1 clock for any interrupts to run

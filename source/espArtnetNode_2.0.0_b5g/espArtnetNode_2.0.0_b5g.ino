@@ -63,7 +63,17 @@ extern "C" {
 
 
 
-
+#define D0 16
+#define D1 5
+#define D2 4
+#define D3 0
+#define D4 2
+#define D5 14
+#define D6 12
+#define D7 13
+#define D8 15
+#define D9 3
+#define D10 1
 
 
 #ifdef ESP_01
@@ -121,8 +131,8 @@ ESP8266WebServer webServer(80);
 DynamicJsonBuffer jsonBuffer;
 ws2812Driver pixDriver;
 File fsUploadFile;
-bool statusLedsDim = true;
-bool statusLedsOff = false;
+bool statusLedsDim = false;
+bool statusLedsOff = true;
 
 pixPatterns pixFXA(0, &pixDriver);
 pixPatterns pixFXB(1, &pixDriver);
@@ -154,10 +164,23 @@ bool newDmxIn = false;
 bool doReboot = false;
 byte* dataIn;
 
+// Last time debugging messages where printed during program loop executuion, in milliseconds since start.
+//unsigned long debugMesgTime = 0;
+//bool debug = false;
+
 void setup(void) {
+  
   //pinMode(4, OUTPUT);
   //digitalWrite(4, LOW);
 
+  
+//  if(debug) {
+//    Serial.begin(115200);
+//    Serial.println("***** Serial Connection Established *****");
+//    Serial.println("***** Initialization Started *****");
+//    Serial.println("*** Initializing Pins ***");
+//  }
+    
   // Make direction input to avoid boot garbage being sent out
   pinMode(DMX_DIR_A, OUTPUT);
   digitalWrite(DMX_DIR_A, LOW);
@@ -188,6 +211,9 @@ void setup(void) {
         resetDefaults = true;
     }
   #endif
+
+//  if(debug)
+//    Serial.println("*** Initializing EEPROM ***");
   
   // Start EEPROM
   EEPROM.begin(512);
@@ -217,6 +243,9 @@ void setup(void) {
   // Store values
   eepromSave();
 
+//  if(debug)
+//    Serial.println("*** Initializing WIFI ***");
+
   // Start wifi
   wifiStart();
 
@@ -244,10 +273,19 @@ void setup(void) {
   } else
     deviceSettings.doFirmwareUpdate = false;
 
+//  Serial.println("***** Initialization Complete *****");
+
   delay(10);
 }
 
 void loop(void){
+//  debug = false;
+//  if (millis() - debugMesgTime >= 1000) {
+//    debug = true;
+//    Serial.printf("\nDebug info at %d ms :\n", millis());
+//    debugMesgTime = millis();
+//  }
+  
   // If the device lasts for 6 seconds, clear our reset timers
   if (deviceSettings.resetCounter != 0 && millis() > 6000) {
     deviceSettings.resetCounter = 0;
@@ -259,7 +297,12 @@ void loop(void){
   
   // Get the node details and handle Artnet
   doNodeReport();
+
+//  if (debug)
+//    Serial.println("*** Calling ArtNet handlers ***");
   artRDM.handler();
+//  if (debug)
+//    Serial.println("*** ArtNet Handlers complete ***");
   
   yield();
 
@@ -337,8 +380,13 @@ void loop(void){
 }
 
 void dmxHandle(uint8_t group, uint8_t port, uint16_t numChans, bool syncEnabled) {
+//  if (debug)
+//    Serial.println("***** Handling DMX data *****");
+  
   if (portA[0] == group) {
     if (deviceSettings.portAmode == TYPE_WS2812) {
+//      if (debug)
+//        Serial.println("*** Putting DMX data into LED strip buffer at port A ***");
       
       #ifndef ESP_01
         setStatusLed(STATUS_LED_A, GREEN);
@@ -390,6 +438,9 @@ void dmxHandle(uint8_t group, uint8_t port, uint16_t numChans, bool syncEnabled)
   #ifndef ONE_PORT
   } else if (portB[0] == group) {
     if (deviceSettings.portBmode == TYPE_WS2812) {
+//      if (debug)
+//        Serial.println("*** Putting DMX data into LED strip buffer at port A ***");
+      
       setStatusLed(STATUS_LED_B, GREEN);
       
       if (deviceSettings.portBpixMode == FX_MODE_PIXEL_MAP) {
@@ -429,6 +480,8 @@ void dmxHandle(uint8_t group, uint8_t port, uint16_t numChans, bool syncEnabled)
   #endif
   }
 
+//  if (debug)
+//    Serial.println("***** DMX handling complete *****");
 }
 
 void syncHandle() {
