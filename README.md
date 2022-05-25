@@ -2,7 +2,20 @@
 Fork of the github repo here: https://github.com/mtongnz/ESP8266_ArtNetNode_v2
 
 This version aims to update and improve upon the old repo, cleaning up the code to make it easier to customize and work with.
+Changes have been made to drivers to make them work with WS2812B led strips instead of WS2812.
 
+## Compilation Settings ##
+The following settings are used and have been tested for a NodeMCU board:
+- Tools -> Board -> NodeMCU 1.0 (ESP-12E Module)
+- Tools -> CPU Frequency -> 160 Mhz
+- Tools -> Flash Size -> 4MB (FS:2MB OTA:~1019KB) (May vary from board to board, use Tools -> Get Board Info for flash size)
+
+## Misc Notes ##
+- DMX_TX_A and DMX_TX_B constants correspond to D10 and D4 pins on the NodeMCU board
+- Wire LED strip's data in to either D10 for port A or D4 for port B
+- For whatever reason, QLCPlus and other software may need to be configured to look for the node in ArtNet Universe 272 regardless of DMX universe settings
+
+# Info from old repo #
 ## ESP8266_ArtNetNode_v2 ##
 ESP8266 based WiFi ArtNet V4 to DMX, RDM and LED Pixels
 
