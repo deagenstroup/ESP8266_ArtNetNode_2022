@@ -23,6 +23,8 @@ The following settings are used and have been tested for the NodeMCU/D1 Mini boa
 
 ## Configuration Notes ##
 - Various WiFi info can be flashed directly into the chip without having to launch it in hotspot mode first, using the device_info.h file. (See device_info_example.h for more info)
+  - Set the STAND_ALONE constant to true to launch the device in hotspot mode by default.
+- A static IP address may need to be configured when connectting to the device in hotspot mode (IP: 2.0.0.2, Gateway: 2.0.0.1, Netmask: 0.0.0.0)
 - For whatever reason, QLCPlus and other software may need to be configured to look for the node in ArtNet Universe 272 when the universe is set to 0, 0, 0, 1 in the web interfaces port settings page.
 - Debugging messages sent over telnet can be configured:
   - telnetIP and TEL_PORT (in the main .ino file) dictate the IP/port that messages are sent to.
