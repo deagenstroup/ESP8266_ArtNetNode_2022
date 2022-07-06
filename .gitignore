@@ -1,0 +1,8 @@
+
+# Don't include device info configuration file since it is unique to each use case and contains
+# sensitive info.
+**/device_info.h
+
+# Don't include the swap files for the VIM text editor.
+**/*.swp
+

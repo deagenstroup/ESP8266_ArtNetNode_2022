@@ -13,9 +13,37 @@ You should have received a copy of the GNU General Public License along with thi
 If not, see http://www.gnu.org/licenses/
 */
 
+extern TelnetMessenger *msgr;
+
+// Configuration file which defines preproccessor variables for default device info.
+// Comment out to use defaults defined below.
+#include "device_info.h"
+
+// Setting default device info values, if not defined already.
+#ifndef STAND_ALONE
+  #define STAND_ALONE false
+#endif
+#ifndef NODE_NAME
+  #define NODE_NAME "espArtNetNode"
+#endif
+#ifndef LONG_NODE_NAME
+  #define LONG_NODE_NAME "espArtNetNode by Matthew Tong"
+#endif
+#ifndef WIFI_SSID
+  #define WIFI_SSID ""
+#endif
+#ifndef WIFI_PASS
+  #define WIFI_PASS ""
+#endif
+#ifndef HOTSPOT_SSID
+  #define HOTSPOT_SSID "espArtNetNode"
+#endif
+#ifndef HOTSPOT_PASS
+  #define HOTSPOT_PASS "byMtongnz2017"
+#endif
 
 // Change this if the settings structure changes
-#define CONFIG_VERSION "b5g"
+#define CONFIG_VERSION "a5b"
 
 // Dont change this
 #define CONFIG_START 0
@@ -64,8 +92,8 @@ struct StoreStruct {
   
   // The default values
   IPAddress(2,0,0,1), IPAddress(255,0,0,0), IPAddress(2,0,0,1), IPAddress(2,255,255,255), IPAddress(2,0,0,1), IPAddress(255,0,0,0), IPAddress(2,255,255,255), IPAddress(2,255,255,255),
-  true, false,
-  "espArtNetNode", "espArtNetNode by Matthew Tong", "", "", "espArtNetNode", "byMtongnz2017",
+  true, STAND_ALONE,
+  NODE_NAME, LONG_NODE_NAME, WIFI_SSID, WIFI_PASS, HOTSPOT_SSID, HOTSPOT_PASS,
   15,
   TYPE_DMX_OUT, TYPE_DMX_OUT, PROT_ARTNET, PROT_ARTNET, MERGE_HTP, MERGE_HTP,
   0, 0, {0, 1, 2, 3}, 0, 0, {4, 5, 6, 7}, {1, 2, 3, 4}, {5, 6, 7, 8},
@@ -78,6 +106,7 @@ struct StoreStruct {
 
 
 void eepromSave() {
+  msgr->sendMessage("Saving configuration to eeprom...");
   for (uint16_t t = 0; t < sizeof(deviceSettings); t++)
     EEPROM.write(CONFIG_START + t, *((char*)&deviceSettings + t));
   
@@ -85,11 +114,14 @@ void eepromSave() {
 }
 
 void eepromLoad() {
+  msgr->sendMessage("Loading from EEPROM...");
   // To make sure there are settings, and they are YOURS!
   // If nothing is found it will use the default settings.
   if (EEPROM.read(CONFIG_START + 0) == CONFIG_VERSION[0] &&
       EEPROM.read(CONFIG_START + 1) == CONFIG_VERSION[1] &&
       EEPROM.read(CONFIG_START + 2) == CONFIG_VERSION[2]) {
+
+    msgr->sendMessage("Loading configuration...");
 
     // Store defaults for if we need them
     StoreStruct tmpStore;
@@ -111,6 +143,7 @@ void eepromLoad() {
 
   // If config files dont match, save defaults then erase the ESP config to clear away any residue
   } else {
+    msgr->sendMessage("Configurations do not match, saving default values...");
     eepromSave();
     delay(500);
     
@@ -118,4 +151,3 @@ void eepromLoad() {
     while(1);
   }
 }
-

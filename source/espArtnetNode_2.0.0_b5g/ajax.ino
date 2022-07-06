@@ -317,6 +317,8 @@ bool ajaxSave(uint8_t page, JsonObject& json) {
     case 5:     // Port B
       #ifndef ONE_PORT
       {
+        msgr->sendMessage("** Changing port B settings **");
+        
         deviceSettings.portBprot = (uint8_t)json["portBprot"];
         bool e131 = (deviceSettings.portBprot == PROT_ARTNET_SACN) ? true : false;
         

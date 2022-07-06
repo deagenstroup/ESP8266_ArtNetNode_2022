@@ -36,6 +36,7 @@ This competition will open to the general public a couple of weeks after the pri
 #include <ArduinoJson.h>
 #include <EEPROM.h>
 #include <FS.h>
+#include "telnetMessenger.h"
 #include "store.h"
 #include "espDMX_RDM.h"
 #include "espArtNetRDM.h"
@@ -52,7 +53,7 @@ extern "C" {
 
 
 //#define ESP_01              // Un comment for ESP_01 board settings
-//#define NO_RESET            // Un comment to disable the reset button
+#define NO_RESET            // Un comment to disable the reset button
 
 // Wemos boards use 4M (3M SPIFFS) compiler option
 
@@ -61,21 +62,7 @@ extern "C" {
 #define ESTA_MAN 0x08DD      // ESTA Manufacturer Code
 #define ESTA_DEV 0xEE000000  // RDM Device ID (used with Man Code to make 48bit UID)
 
-
-
-#define D0 16
-#define D1 5
-#define D2 4
-#define D3 0
-#define D4 2
-#define D5 14
-#define D6 12
-#define D7 13
-#define D8 15
-#define D9 3
-#define D10 1
-
-
+// ESP-1 code is not tested.
 #ifdef ESP_01
   #define DMX_DIR_A 2   // Same pin as TX1
   #define DMX_TX_A 1
@@ -86,15 +73,28 @@ extern "C" {
   #define WS2812_ALLOW_INT_DOUBLE false
   
 #else
-  #define DMX_DIR_A 5   // D1
-  #define DMX_DIR_B 16  // D0
-  #define DMX_TX_A 1
-  #define DMX_TX_B 2
 
-  #define STATUS_LED_PIN 12
+  // Pins for port A & B.
+  #define DMX_TX_A D1
+  #define DMX_TX_B D3
+
+  // Direction pin for port A & B when in DMX mode.
+  // High indicates the pin is outputting DMX data.
+  // Low indicates the pin is receiving DMX data.
+  #define DMX_DIR_A D2
+  #define DMX_DIR_B D4
+
+  // Pin which is connected to the status LEDS.
+  #define STATUS_LED_PIN D5
+
+  // If defined, a WS2812 led strip is used to display status info.
 //  #define STATUS_LED_MODE_WS2812
+
+  // If defined, a series of four pin APA106 LEDs is to display status info.
   #define STATUS_LED_MODE_APA106
-  #define STATUS_LED_A 0  // Physical wiring order for status LEDs
+
+  // Physical wiring order for status LEDs.
+  #define STATUS_LED_A 0
   #define STATUS_LED_B 1
   #define STATUS_LED_S 2
   
@@ -102,10 +102,9 @@ extern "C" {
   #define WS2812_ALLOW_INT_DOUBLE false
 #endif
 
-#ifndef NO_RESET
-  #define SETTINGS_RESET 14
-#endif
-
+//#ifndef NO_RESET
+//  #define SETTINGS_RESET 14
+//#endif
 
 // Definitions for status leds  xxBBRRGG
 #define BLACK 0x00000000
@@ -119,6 +118,17 @@ extern "C" {
 #define YELLOW 0x0000FFFF
 #define ORANGE 0x0000FF33
 #define STATUS_DIM 0x0F
+
+// Port used for telnet debugging interface. Uncomment this to disable telnet debugging.
+#define TEL_PORT 24864
+
+#ifdef TEL_PORT
+  // Telnet debugging interface for sending simple debugging messages.
+  TelnetMessenger *msgr;
+  
+  // IP address of the telnet server to send debugging info to.
+  const uint8_t telnetIP[] = {192, 168, 1, 110};
+#endif
 
 uint8_t portA[5], portB[5];
 uint8_t MAC_array[6];
@@ -169,6 +179,12 @@ byte* dataIn;
 //bool debug = false;
 
 void setup(void) {
+
+  // Initializing temporary telnet debugging interface.
+  #ifdef TEL_PORT
+    msgr = new TelnetMessenger(WIFI_SSID, WIFI_PASS, TEL_PORT, TEL_PORT, IPAddress(telnetIP));
+    msgr->sendMessage("Telnet debugging interface initialized...");
+  #endif
   
   //pinMode(4, OUTPUT);
   //digitalWrite(4, LOW);
@@ -229,10 +245,14 @@ void setup(void) {
     f.print("Formatted");
     f.close();
   }
-
+  
+  msgr->sendMessage("Preparing to load from eeprom...");
   // Load our saved values or store defaults
-  if (!resetDefaults)
+  if (!resetDefaults) {
+    msgr->sendMessage("Preparing to load from eeprom...");
     eepromLoad();
+  } else
+    msgr->sendMessage("Resetting to defaulst...");
 
   // Store our counters for resetting defaults
   if (resetInfo.reason != REASON_DEFAULT_RST && resetInfo.reason != REASON_EXT_SYS_RST && resetInfo.reason != REASON_SOFT_RESTART)
@@ -273,7 +293,9 @@ void setup(void) {
   } else
     deviceSettings.doFirmwareUpdate = false;
 
-//  Serial.println("***** Initialization Complete *****");
+  #ifdef TEL_PORT
+    msgr->sendMessage("***** Setup Complete *****");
+  #endif
 
   delay(10);
 }
@@ -349,6 +371,7 @@ void loop(void){
 
   // Handle rebooting the system
   if (doReboot) {
+    msgr->sendMessage("Device rebooting....");
     char c[ARTNET_NODE_REPORT_LENGTH] = "Device rebooting...";
     artRDM.setNodeReport(c, ARTNET_RC_POWER_OK);
     artRDM.artPollReply();

@@ -13,6 +13,7 @@ You should have received a copy of the GNU General Public License along with thi
 If not, see http://www.gnu.org/licenses/
 */
 
+extern TelnetMessenger *msgr;
 
 void doNodeReport() {
   if (nextNodeReport > millis())
@@ -346,6 +347,8 @@ void webStart() {
 }
 
 void wifiStart() {
+  msgr->sendMessage("**Starting Wifi**");
+  
   // If it's the default WiFi SSID, make it unique
   if (strcmp(deviceSettings.hotspotSSID, "espArtNetNode") == 0 || deviceSettings.hotspotSSID[0] == '\0')
     sprintf(deviceSettings.hotspotSSID, "espArtNetNode_%05u", (ESP.getChipId() & 0xFF));
