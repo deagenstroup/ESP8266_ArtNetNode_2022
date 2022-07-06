@@ -4,16 +4,31 @@ Fork of the github repo here: https://github.com/mtongnz/ESP8266_ArtNetNode_v2
 This version aims to update and improve upon the old repo, cleaning up the code to make it easier to customize and work with.
 Changes have been made to drivers to make them work with WS2812B led strips instead of WS2812.
 
+## Wiring Notes ##
+- See .../schematics/ESP12F_ArtNetModule_2022.png for wiring notes.
+- The DMX_TX_A and DMX_TX_B constants correspond to the pins to be connected to the LED strip's data in.
+LED Data -> D1 (for port A)
+and/or
+LED Data -> D3 (for port B)
+
 ## Compilation Settings ##
-The following settings are used and have been tested for a NodeMCU board:
+The following settings are used and have been tested for the NodeMCU/D1 Mini boards:
+### NodeMCU: ###
 - Tools -> Board -> NodeMCU 1.0 (ESP-12E Module)
 - Tools -> CPU Frequency -> 160 Mhz
 - Tools -> Flash Size -> 4MB (FS:2MB OTA:~1019KB) (May vary from board to board, use Tools -> Get Board Info for flash size)
+### D1 Mini: ###
+- Tools -> Board -> LOLIN(WEMOS) D1 Mini clone
+- Tools -> CPU Frequency -> 160 Mhz
 
-## Misc Notes ##
-- DMX_TX_A and DMX_TX_B constants correspond to D10 and D4 pins on the NodeMCU board
-- Wire LED strip's data in to either D10 for port A or D4 for port B
-- For whatever reason, QLCPlus and other software may need to be configured to look for the node in ArtNet Universe 272 regardless of DMX universe settings
+## Configuration Notes ##
+- Various WiFi info can be flashed directly into the chip without having to launch it in hotspot mode first, using the device_info.h file. (See device_info_example.h for more info)
+- For whatever reason, QLCPlus and other software may need to be configured to look for the node in ArtNet Universe 272 when the universe is set to 0, 0, 0, 1 in the web interfaces port settings page.
+- Debugging messages sent over telnet can be configured:
+  - telnetIP and TEL_PORT (in the main .ino file) dictate the IP/port that messages are sent to.
+  - Commenting out TEL_PORT disables telnet message debugging.
+  - On systems with netcat installed, the command 'nc -u -l 24864' can be run to receive debugging messages. 
+
 
 # Info from old repo #
 ## ESP8266_ArtNetNode_v2 ##
