@@ -12,6 +12,7 @@ If not, see http://www.gnu.org/licenses/
 */
 
 void ajaxHandle() {
+  msgr->sendMessage("Handling ajax request..");
   JsonObject& json = jsonBuffer.parseObject(webServer.arg("plain"));
   JsonObject& jsonReply = jsonBuffer.createObject();
   
@@ -19,6 +20,7 @@ void ajaxHandle() {
   
   // Handle request to reboot into update mode
   if (json.containsKey("success") && json["success"] == 1 && json.containsKey("doUpdate")) {
+    msgr->sendMessage("--- Rebooting into update mode.");
     artRDM.end();
     
     jsonReply["success"] = 1;
@@ -40,19 +42,22 @@ void ajaxHandle() {
     
   // Handle load and save of data
   } else if (json.containsKey("success") && json["success"] == 1 && json.containsKey("page")) {
+    msgr->sendMessage("--- Handling loading and saving.");
     if (ajaxSave((uint8_t)json["page"], json)) {
       ajaxLoad((uint8_t)json["page"], jsonReply);
 
       if (json.size() > 2)
         jsonReply["message"] = "Settings Saved";
-
+      msgr->sendMessage("--- Ajax settings saved");
     } else {
       jsonReply["success"] = 0;
       jsonReply["message"] = "Failed to save data.  Reload page and try again.";
+      msgr->sendMessage("--- Failed to save Ajax settings");
     }
     
   // Handle reboots
   } else if (json.containsKey("success") && json.containsKey("reboot") && json["reboot"] == 1) {
+    msgr->sendMessage("--- Device restarting.");
     jsonReply["success"] = 1;
     jsonReply["message"] = "Device Restarting.";
     
@@ -67,9 +72,13 @@ void ajaxHandle() {
 
   jsonReply.printTo(reply);
   webServer.send(200, "application/json", reply);
+  msgr->sendMessage("---- Ajax request handled ----");
 }
 
 bool ajaxSave(uint8_t page, JsonObject& json) {
+  char debugStr[200];
+  sprintf(debugStr, "**** Saving AJAX, case: %d ****", page);
+  msgr->sendMessage(debugStr);
   // This is a load request, not a save
   if (json.size() == 2)
     return true;
@@ -96,8 +105,8 @@ bool ajaxSave(uint8_t page, JsonObject& json) {
       deviceSettings.ip = IPAddress(json["ipAddress"][0],json["ipAddress"][1],json["ipAddress"][2],json["ipAddress"][3]);
       deviceSettings.subnet = IPAddress(json["subAddress"][0],json["subAddress"][1],json["subAddress"][2],json["subAddress"][3]);
       deviceSettings.gateway = IPAddress(json["gwAddress"][0],json["gwAddress"][1],json["gwAddress"][2],json["gwAddress"][3]);
-      deviceSettings.broadcast = deviceSettings.ip;// | ~(uint32_t)deviceSettings.subnet;
-      //deviceSettings.broadcast = {~deviceSettings.subnet[0] | (deviceSettings.ip[0] & deviceSettings.subnet[0]), ~deviceSettings.subnet[1] | (deviceSettings.ip[1] & deviceSettings.subnet[1]), ~deviceSettings.subnet[2] | (deviceSettings.ip[2] & deviceSettings.subnet[2]), ~deviceSettings.subnet[3] | (deviceSettings.ip[3] & deviceSettings.subnet[3])};
+      //deviceSettings.broadcast = deviceSettings.ip;// | ~(uint32_t)deviceSettings.subnet;
+      deviceSettings.broadcast = {~deviceSettings.subnet[0] | (deviceSettings.ip[0] & deviceSettings.subnet[0]), ~deviceSettings.subnet[1] | (deviceSettings.ip[1] & deviceSettings.subnet[1]), ~deviceSettings.subnet[2] | (deviceSettings.ip[2] & deviceSettings.subnet[2]), ~deviceSettings.subnet[3] | (deviceSettings.ip[3] & deviceSettings.subnet[3])};
 
       json.get<String>("nodeName").toCharArray(deviceSettings.nodeName, 18);
       json.get<String>("longName").toCharArray(deviceSettings.longName, 64);
@@ -318,6 +327,13 @@ bool ajaxSave(uint8_t page, JsonObject& json) {
       #ifndef ONE_PORT
       {
         msgr->sendMessage("** Changing port B settings **");
+//        #ifdef HOTSPOT_PIN
+//          if (digitalRead(HOTSPOT_PIN) == HIGH) {
+//            msgr->sendMessage("*** Hotspot Button Pressed ***");
+//          } else {
+//            msgr->sendMessage("*** Hotspot Button Not Pressed ***");
+//          }
+//        #endif
         
         deviceSettings.portBprot = (uint8_t)json["portBprot"];
         bool e131 = (deviceSettings.portBprot == PROT_ARTNET_SACN) ? true : false;
@@ -491,6 +507,9 @@ bool ajaxSave(uint8_t page, JsonObject& json) {
 }
 
 void ajaxLoad(uint8_t page, JsonObject& jsonReply) {
+  char debugStr[200];
+  sprintf(debugStr, "**** Loading AJAX, case: %d ****", page);
+  msgr->sendMessage(debugStr);
 
   // Create the needed arrays here - doesn't work within the switch below
   JsonArray& ipAddress = jsonReply.createNestedArray("ipAddress");
@@ -513,6 +532,8 @@ void ajaxLoad(uint8_t page, JsonObject& jsonReply) {
 
   switch (page) {
     case 1:     // Device Status
+      msgr->sendMessage("Handling Device Status");
+    
       jsonReply.remove("ipAddress");
       jsonReply.remove("subAddress");
       jsonReply.remove("gwAddress");
@@ -522,6 +543,8 @@ void ajaxLoad(uint8_t page, JsonObject& jsonReply) {
       jsonReply.remove("portAsACNuni");
       jsonReply.remove("portBsACNuni");
       jsonReply.remove("dmxInBroadcast");
+
+      msgr->sendMessage("--- jsonreply property removal complete");
       
       jsonReply["nodeName"] = deviceSettings.nodeName;
       jsonReply["wifiStatus"] = wifiStatus;
@@ -530,10 +553,18 @@ void ajaxLoad(uint8_t page, JsonObject& jsonReply) {
         jsonReply["ipAddressT"] = deviceSettings.hotspotIp.toString();
         jsonReply["subAddressT"] = deviceSettings.hotspotSubnet.toString();
       } else {
-        jsonReply["ipAddressT"] = deviceSettings.ip.toString();
-        jsonReply["subAddressT"] = deviceSettings.subnet.toString();
+        msgr->sendMessage("--- converting ip address and ip subaddress to strings");
+        char buff[80];
+        sprintf(buff, "%d.%d.%d.%d", deviceSettings.ip[0], deviceSettings.ip[1], deviceSettings.ip[2], deviceSettings.ip[3]);
+        jsonReply["ipAddressT"] = buff;
+//        jsonReply["subAddressT"] = deviceSettings.subnet.toString();
+//        jsonReply["ipAddressT"] = deviceSettings.ip.toString();
+//        jsonReply["subAddressT"] = deviceSettings.subnet.toString();
+//        jsonReply["ipAddressT"] = "10.10.0.3";
+//        jsonReply["subAddressT"] = "255.255.255.0";
       }
-
+      msgr->sendMessage("--- ipAddress and subAddress string conversion complete.");
+      
       if (isHotspot && !deviceSettings.standAloneEnable) {
         jsonReply["portAStatus"] = "Disabled in hotspot mode";
         jsonReply["portBStatus"] = "Disabled in hotspot mode";
@@ -578,6 +609,7 @@ void ajaxLoad(uint8_t page, JsonObject& jsonReply) {
       jsonReply["firmwareStatus"] = FIRMWARE_VERSION;
 
       jsonReply["success"] = 1;
+      msgr->sendMessage("--- Device status handling complete");
       break;
 
     case 2:     // Wifi

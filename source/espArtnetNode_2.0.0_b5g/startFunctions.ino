@@ -269,6 +269,8 @@ void artStart() {
 }
 
 void webStart() {
+  msgr->sendMessage("**Starting Web Interface**");
+  
   webServer.on("/", [](){
     artRDM.pause();
     webServer.send_P(200, typeHTML, mainPage);

@@ -30,6 +30,8 @@ These prizes will be based on the first person to submit a solution that I judge
 This competition will open to the general public a couple of weeks after the private code release to supporters.
 */
 
+#include <stdio.h>
+
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
@@ -53,7 +55,6 @@ extern "C" {
 
 
 //#define ESP_01              // Un comment for ESP_01 board settings
-#define NO_RESET            // Un comment to disable the reset button
 
 // Wemos boards use 4M (3M SPIFFS) compiler option
 
@@ -84,14 +85,17 @@ extern "C" {
   #define DMX_DIR_A D2
   #define DMX_DIR_B D4
 
+  // Pin which is connected to the hotspot mode button.
+  #define HOTSPOT_PIN D7
+
   // Pin which is connected to the status LEDS.
-  #define STATUS_LED_PIN D5
+  //#define STATUS_LED_PIN D5
 
   // If defined, a WS2812 led strip is used to display status info.
 //  #define STATUS_LED_MODE_WS2812
 
   // If defined, a series of four pin APA106 LEDs is to display status info.
-  #define STATUS_LED_MODE_APA106
+  //#define STATUS_LED_MODE_APA106
 
   // Physical wiring order for status LEDs.
   #define STATUS_LED_A 0
@@ -101,10 +105,6 @@ extern "C" {
   #define WS2812_ALLOW_INT_SINGLE false
   #define WS2812_ALLOW_INT_DOUBLE false
 #endif
-
-//#ifndef NO_RESET
-//  #define SETTINGS_RESET 14
-//#endif
 
 // Definitions for status leds  xxBBRRGG
 #define BLACK 0x00000000
@@ -127,7 +127,7 @@ extern "C" {
   TelnetMessenger *msgr;
   
   // IP address of the telnet server to send debugging info to.
-  const uint8_t telnetIP[] = {192, 168, 1, 110};
+  const uint8_t telnetIP[] = {192, 168, 1, 255};
 #endif
 
 uint8_t portA[5], portB[5];
@@ -174,6 +174,8 @@ bool newDmxIn = false;
 bool doReboot = false;
 byte* dataIn;
 
+char debugStr[200];
+
 // Last time debugging messages where printed during program loop executuion, in milliseconds since start.
 //unsigned long debugMesgTime = 0;
 //bool debug = false;
@@ -184,6 +186,11 @@ void setup(void) {
   #ifdef TEL_PORT
     msgr = new TelnetMessenger(WIFI_SSID, WIFI_PASS, TEL_PORT, TEL_PORT, IPAddress(telnetIP));
     msgr->sendMessage("Telnet debugging interface initialized...");
+  #endif
+
+  // If the hotspot mode button is enabled, configure the button on the specified pin.
+  #ifdef HOTSPOT_PIN
+    pinMode(HOTSPOT_PIN, INPUT_PULLUP);
   #endif
   
   //pinMode(4, OUTPUT);
@@ -205,7 +212,7 @@ void setup(void) {
     digitalWrite(DMX_DIR_B, LOW);
   #endif
 
-  #ifndef ESP_01
+  #ifdef STATUS_LED_PIN
     pinMode(STATUS_LED_PIN, OUTPUT);
     digitalWrite(STATUS_LED_PIN, LOW);
     delay(1);
@@ -215,18 +222,19 @@ void setup(void) {
 
   wifi_set_sleep_type(NONE_SLEEP_T);
   bool resetDefaults = false;
-  
-  #ifdef SETTINGS_RESET
-    pinMode(SETTINGS_RESET, INPUT);
 
-    delay(5);
-    // button pressed = low reading
-    if (!digitalRead(SETTINGS_RESET)) {
-      delay(50);
-      if (!digitalRead(SETTINGS_RESET))
-        resetDefaults = true;
-    }
-  #endif
+  // If the configuration button is enabled, 
+//  #ifdef CONFIG_RESET_BUTTON
+//    pinMode(CONFIG_RESET_BUTTON, INPUT_PULLUP);
+//
+//    delay(5);
+//    
+//    if (digitalRead(SETTINGS_RESET) == LOW) {
+//      delay(50);
+//      if (!digitalRead(SETTINGS_RESET))
+//        resetDefaults = true;
+//    }
+//  #endif
 
 //  if(debug)
 //    Serial.println("*** Initializing EEPROM ***");
@@ -263,8 +271,13 @@ void setup(void) {
   // Store values
   eepromSave();
 
-//  if(debug)
-//    Serial.println("*** Initializing WIFI ***");
+  // If the hotspot pin button is enabled and pressed down, launch the device in hotspot mode.
+  #ifdef HOTSPOT_PIN
+    if (digitalRead(HOTSPOT_PIN) == LOW) {
+      deviceSettings.standAloneEnable = true;
+      msgr->sendMessage("** Starting in stand alone mode **");
+    }
+  #endif
 
   // Start wifi
   wifiStart();
@@ -310,10 +323,18 @@ void loop(void){
   
   // If the device lasts for 6 seconds, clear our reset timers
   if (deviceSettings.resetCounter != 0 && millis() > 6000) {
+    sprintf(debugStr, "--- Clearing reset counters: %d, %d", deviceSettings.resetCounter, deviceSettings.wdtCounter);
+    msgr->sendMessage(debugStr);
     deviceSettings.resetCounter = 0;
     deviceSettings.wdtCounter = 0;
     eepromSave();
   }
+
+  #ifdef HOTSPOT_PIN
+    if (digitalRead(HOTSPOT_PIN) == LOW) {
+      msgr->sendMessage("*** Hotspot Button Pressed ***");
+    }
+  #endif
   
   webServer.handleClient();
   
