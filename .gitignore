@@ -6,3 +6,9 @@
 # Don't include the swap files for the VIM text editor.
 **/*.swp
 
+# Don't include backup files.
+**/*.bak
+
+# Don't include the misc folder.
+misc/
+

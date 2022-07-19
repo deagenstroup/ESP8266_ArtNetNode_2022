@@ -349,7 +349,7 @@ void webStart() {
 }
 
 void wifiStart() {
-  msgr->sendMessage("**Starting Wifi**");
+  // fmsgr->sendMessage("**Starting Wifi**");
   
   // If it's the default WiFi SSID, make it unique
   if (strcmp(deviceSettings.hotspotSSID, "espArtNetNode") == 0 || deviceSettings.hotspotSSID[0] == '\0')

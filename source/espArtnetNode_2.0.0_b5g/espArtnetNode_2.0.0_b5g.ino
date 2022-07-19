@@ -127,7 +127,7 @@ extern "C" {
   TelnetMessenger *msgr;
   
   // IP address of the telnet server to send debugging info to.
-  const uint8_t telnetIP[] = {192, 168, 1, 255};
+  const uint8_t telnetIP[] = {BROAD_A, BROAD_B, BROAD_C, BROAD_D};
 #endif
 
 uint8_t portA[5], portB[5];
@@ -184,7 +184,7 @@ void setup(void) {
 
   // Initializing temporary telnet debugging interface.
   #ifdef TEL_PORT
-    msgr = new TelnetMessenger(WIFI_SSID, WIFI_PASS, TEL_PORT, TEL_PORT, IPAddress(telnetIP));
+    msgr = new TelnetMessenger(WIFI_SSID, WIFI_PASS, TEL_PORT, TEL_PORT, IPAddress(BROAD_A, BROAD_B, BROAD_C, BROAD_D));
     msgr->sendMessage("Telnet debugging interface initialized...");
   #endif
 
