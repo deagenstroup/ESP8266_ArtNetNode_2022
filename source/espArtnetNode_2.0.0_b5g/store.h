@@ -153,24 +153,19 @@ struct StoreStruct {
   0, 0
 };
 
-
 void eepromSave() {
-  //msgr->sendMessage("Saving configuration to eeprom...");
   for (uint16_t t = 0; t < sizeof(deviceSettings); t++)
     EEPROM.write(CONFIG_START + t, *((uint8_t*)&deviceSettings + t));
   
   EEPROM.commit();
+
+  #ifdef TEL_PORT
+    if (msgr != NULL)
+      msgr->sendMessage("Configuration saved to EEPROM.");
+  #endif
 }
 
 void eepromLoad() {
-  msgr->sendMessage("Loading from EEPROM...");
-//  // To make sure there are settings, and they are YOURS!
-//  // If nothing is found it will use the default settings.
-//  if ((EEPROM.read(CONFIG_START + 0) == CONFIG_VERSION[0] &&
-//      EEPROM.read(CONFIG_START + 1) == CONFIG_VERSION[1] &&
-//      EEPROM.read(CONFIG_START + 2) == CONFIG_VERSION[2]) || true) {
-
-    //msgr->sendMessage("Loading configuration...");
 
     // Store defaults for if we need them
     StoreStruct tmpStore;
@@ -189,14 +184,9 @@ void eepromLoad() {
       deviceSettings = tmpStore;
     }
 
+    #ifdef TEL_PORT
+      if (msgr != NULL)
+        msgr->sendMessage("Configuration loaded from EEPROM.");
+    #endif
 
-  // If config files dont match, save defaults then erase the ESP config to clear away any residue
-//  } else {
-//    msgr->sendMessage("Configurations do not match, saving default values...");
-//    eepromSave();
-//    delay(500);
-//    
-//    ESP.eraseConfig();
-//    while(1);
-//  }
 }

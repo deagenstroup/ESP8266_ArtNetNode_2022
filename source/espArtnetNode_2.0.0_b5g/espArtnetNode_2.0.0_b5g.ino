@@ -124,11 +124,18 @@ extern "C" {
 
 #ifdef TEL_PORT
   // Telnet debugging interface for sending simple debugging messages.
-  TelnetMessenger *msgr;
+  TelnetMessenger *msgr = NULL;
   
   // IP address of the telnet server to send debugging info to.
   const uint8_t telnetIP[] = {BROAD_A, BROAD_B, BROAD_C, BROAD_D};
+
+  // Buffer used to sprint debugging messages before they are sent out.
+  char debugStr[200];
 #endif
+
+// If defined, the node will attempt to connect to the default WiFi AP as soon as it starts
+// and send debugging messages during the initialization process.
+#define EARLY_DEBUG
 
 uint8_t portA[5], portB[5];
 uint8_t MAC_array[6];
@@ -147,6 +154,7 @@ bool statusLedsOff = true;
 pixPatterns pixFXA(0, &pixDriver);
 pixPatterns pixFXB(1, &pixDriver);
 
+// Store default HTML and CSS for the web interface in flash memory.
 const char PROGMEM mainPage[] = "<!DOCTYPE html><meta content='text/html; charset=utf-8' http-equiv=Content-Type /><title>ESP8266 ArtNetNode Config</title><meta content='Matthew Tong - http://github.com/mtongnz/' name=DC.creator /><meta content=en name=DC.language /><meta content='width=device-width,initial-scale=1' name=viewport /><link href=style.css rel=stylesheet /><div id=page><div class=inner><div class=mast><div class=title>esp8266<h1>ArtNet & sACN</h1>to<h1>DMX & LED Pixels</h1></div><ul class=nav><li class=first><a href='javascript: menuClick(1)'>Device Status</a><li><a href='javascript: menuClick(2)'>WiFi</a><li><a href='javascript: menuClick(3)'>IP & Name</a><li><a href='javascript: menuClick(4)'>Port A</a>"
     #ifndef ONE_PORT
       "<li><a href='javascript: menuClick(5)'>Port B</a>"
@@ -174,35 +182,18 @@ bool newDmxIn = false;
 bool doReboot = false;
 byte* dataIn;
 
-char debugStr[200];
-
-// Last time debugging messages where printed during program loop executuion, in milliseconds since start.
-//unsigned long debugMesgTime = 0;
-//bool debug = false;
-
 void setup(void) {
 
   // Initializing temporary telnet debugging interface.
-  #ifdef TEL_PORT
+  #if defined(TEL_PORT) && defined(EARLY_DEBUG)
     msgr = new TelnetMessenger(WIFI_SSID, WIFI_PASS, TEL_PORT, TEL_PORT, IPAddress(BROAD_A, BROAD_B, BROAD_C, BROAD_D));
-    msgr->sendMessage("Telnet debugging interface initialized...");
+    msgr->sendMessage("Telnet debugging interface initialized in early debugging mode.");
   #endif
 
   // If the hotspot mode button is enabled, configure the button on the specified pin.
   #ifdef HOTSPOT_PIN
     pinMode(HOTSPOT_PIN, INPUT_PULLUP);
   #endif
-  
-  //pinMode(4, OUTPUT);
-  //digitalWrite(4, LOW);
-
-  
-//  if(debug) {
-//    Serial.begin(115200);
-//    Serial.println("***** Serial Connection Established *****");
-//    Serial.println("***** Initialization Started *****");
-//    Serial.println("*** Initializing Pins ***");
-//  }
     
   // Make direction input to avoid boot garbage being sent out
   pinMode(DMX_DIR_A, OUTPUT);
@@ -212,6 +203,7 @@ void setup(void) {
     digitalWrite(DMX_DIR_B, LOW);
   #endif
 
+  // Initialize status pin, if enabled.
   #ifdef STATUS_LED_PIN
     pinMode(STATUS_LED_PIN, OUTPUT);
     digitalWrite(STATUS_LED_PIN, LOW);
@@ -220,24 +212,9 @@ void setup(void) {
     doStatusLedOutput();
   #endif
 
+  // ???
   wifi_set_sleep_type(NONE_SLEEP_T);
   bool resetDefaults = false;
-
-  // If the configuration button is enabled, 
-//  #ifdef CONFIG_RESET_BUTTON
-//    pinMode(CONFIG_RESET_BUTTON, INPUT_PULLUP);
-//
-//    delay(5);
-//    
-//    if (digitalRead(SETTINGS_RESET) == LOW) {
-//      delay(50);
-//      if (!digitalRead(SETTINGS_RESET))
-//        resetDefaults = true;
-//    }
-//  #endif
-
-//  if(debug)
-//    Serial.println("*** Initializing EEPROM ***");
   
   // Start EEPROM
   EEPROM.begin(512);
@@ -245,8 +222,8 @@ void setup(void) {
   // Start SPIFFS file system
   SPIFFS.begin();
 
-  // Check if SPIFFS formatted
-  if (SPIFFS.exists("/formatted.txt")) {
+  // Check if SPIFFS is formatted. (Used to store custom style sheets)
+  if (!SPIFFS.exists("/formatted.txt")) {
     SPIFFS.format();
     
     File f = SPIFFS.open("/formatted.txt", "w");
@@ -254,13 +231,8 @@ void setup(void) {
     f.close();
   }
   
-  msgr->sendMessage("Preparing to load from eeprom...");
-  // Load our saved values or store defaults
-  if (!resetDefaults) {
-    msgr->sendMessage("Preparing to load from eeprom...");
-    eepromLoad();
-  } else
-    msgr->sendMessage("Resetting to defaulst...");
+  // Load our saved values.
+  eepromLoad();
 
   // Store our counters for resetting defaults
   if (resetInfo.reason != REASON_DEFAULT_RST && resetInfo.reason != REASON_EXT_SYS_RST && resetInfo.reason != REASON_SOFT_RESTART)
@@ -275,16 +247,24 @@ void setup(void) {
   #ifdef HOTSPOT_PIN
     if (digitalRead(HOTSPOT_PIN) == LOW) {
       deviceSettings.standAloneEnable = true;
-      msgr->sendMessage("** Starting in stand alone mode **");
+      #ifdef TEL_PORT
+        if (msgr != NULL)
+          msgr->sendMessage("Starting in stand alone mode.");
+      #endif
     }
   #endif
 
   // Start wifi
   wifiStart();
 
+  // Initializing the telnet debugging interface.
+  #ifdef TEL_PORT
+    msgr = new TelnetMessenger(TEL_PORT, TEL_PORT, deviceSettings.broadcast);
+    msgr->sendMessage("Telnet debugging interface initialized.");
+  #endif
+
   // Start web server
   webStart();
-
   
   // Don't start our Artnet or DMX in firmware update mode or after multiple WDT resets
   if (!deviceSettings.doFirmwareUpdate && deviceSettings.wdtCounter <= 3) {
@@ -307,32 +287,28 @@ void setup(void) {
     deviceSettings.doFirmwareUpdate = false;
 
   #ifdef TEL_PORT
-    msgr->sendMessage("***** Setup Complete *****");
+    msgr->sendMessage("Setup complete.");
   #endif
 
   delay(10);
 }
 
 void loop(void){
-//  debug = false;
-//  if (millis() - debugMesgTime >= 1000) {
-//    debug = true;
-//    Serial.printf("\nDebug info at %d ms :\n", millis());
-//    debugMesgTime = millis();
-//  }
   
   // If the device lasts for 6 seconds, clear our reset timers
   if (deviceSettings.resetCounter != 0 && millis() > 6000) {
-    sprintf(debugStr, "--- Clearing reset counters: %d, %d", deviceSettings.resetCounter, deviceSettings.wdtCounter);
-    msgr->sendMessage(debugStr);
+    #ifdef TEL_PORT
+      sprintf(debugStr, "Clearing reset counters: %d, %d", deviceSettings.resetCounter, deviceSettings.wdtCounter);
+      msgr->sendMessage(debugStr);
+    #endif
     deviceSettings.resetCounter = 0;
     deviceSettings.wdtCounter = 0;
     eepromSave();
   }
 
-  #ifdef HOTSPOT_PIN
+  #if HOTSPOT_PIN && TEL_PORT
     if (digitalRead(HOTSPOT_PIN) == LOW) {
-      msgr->sendMessage("*** Hotspot Button Pressed ***");
+      msgr->sendMessage("Hotspot Button Pressed.");
     }
   #endif
   
@@ -341,11 +317,7 @@ void loop(void){
   // Get the node details and handle Artnet
   doNodeReport();
 
-//  if (debug)
-//    Serial.println("*** Calling ArtNet handlers ***");
   artRDM.handler();
-//  if (debug)
-//    Serial.println("*** ArtNet Handlers complete ***");
   
   yield();
 
@@ -392,7 +364,9 @@ void loop(void){
 
   // Handle rebooting the system
   if (doReboot) {
-    msgr->sendMessage("Device rebooting....");
+    #ifdef TEL_PORT
+      msgr->sendMessage("Device rebooting....");
+    #endif
     char c[ARTNET_NODE_REPORT_LENGTH] = "Device rebooting...";
     artRDM.setNodeReport(c, ARTNET_RC_POWER_OK);
     artRDM.artPollReply();
@@ -424,13 +398,9 @@ void loop(void){
 }
 
 void dmxHandle(uint8_t group, uint8_t port, uint16_t numChans, bool syncEnabled) {
-//  if (debug)
-//    Serial.println("***** Handling DMX data *****");
   
   if (portA[0] == group) {
     if (deviceSettings.portAmode == TYPE_WS2812) {
-//      if (debug)
-//        Serial.println("*** Putting DMX data into LED strip buffer at port A ***");
       
       #ifndef ESP_01
         setStatusLed(STATUS_LED_A, GREEN);
@@ -482,8 +452,6 @@ void dmxHandle(uint8_t group, uint8_t port, uint16_t numChans, bool syncEnabled)
   #ifndef ONE_PORT
   } else if (portB[0] == group) {
     if (deviceSettings.portBmode == TYPE_WS2812) {
-//      if (debug)
-//        Serial.println("*** Putting DMX data into LED strip buffer at port A ***");
       
       setStatusLed(STATUS_LED_B, GREEN);
       
@@ -524,8 +492,6 @@ void dmxHandle(uint8_t group, uint8_t port, uint16_t numChans, bool syncEnabled)
   #endif
   }
 
-//  if (debug)
-//    Serial.println("***** DMX handling complete *****");
 }
 
 void syncHandle() {
