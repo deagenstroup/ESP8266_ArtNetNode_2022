@@ -269,7 +269,7 @@ void artStart() {
 }
 
 void webStart() {
-  msgr->sendMessage("**Starting Web Interface**");
+  
   
   webServer.on("/", [](){
     artRDM.pause();
@@ -344,12 +344,15 @@ void webStart() {
   });
   
   webServer.begin();
+
+  #ifdef TEL_PORT
+    msgr->sendMessage("Web interface started.");
+  #endif
   
   yield();
 }
 
 void wifiStart() {
-  // fmsgr->sendMessage("**Starting Wifi**");
   
   // If it's the default WiFi SSID, make it unique
   if (strcmp(deviceSettings.hotspotSSID, "espArtNetNode") == 0 || deviceSettings.hotspotSSID[0] == '\0')
@@ -360,7 +363,8 @@ void wifiStart() {
 
     deviceSettings.ip = deviceSettings.hotspotIp;
     deviceSettings.subnet = deviceSettings.hotspotSubnet;
-    deviceSettings.broadcast = {~deviceSettings.subnet[0] | (deviceSettings.ip[0] & deviceSettings.subnet[0]), ~deviceSettings.subnet[1] | (deviceSettings.ip[1] & deviceSettings.subnet[1]), ~deviceSettings.subnet[2] | (deviceSettings.ip[2] & deviceSettings.subnet[2]), ~deviceSettings.subnet[3] | (deviceSettings.ip[3] & deviceSettings.subnet[3])};
+    deviceSettings.broadcast = deviceSettings.hotspotBroadcast;
+    //deviceSettings.broadcast = IPAddress(~deviceSettings.subnet[0] | (deviceSettings.ip[0] & deviceSettings.subnet[0]), ~deviceSettings.subnet[1] | (deviceSettings.ip[1] & deviceSettings.subnet[1]), ~deviceSettings.subnet[2] | (deviceSettings.ip[2] & deviceSettings.subnet[2]), ~deviceSettings.subnet[3] | (deviceSettings.ip[3] & deviceSettings.subnet[3]));
   
     return;
   }
@@ -384,8 +388,9 @@ void wifiStart() {
 
       if (deviceSettings.gateway == INADDR_NONE)
         deviceSettings.gateway = WiFi.gatewayIP();
-      
-      deviceSettings.broadcast = {~deviceSettings.subnet[0] | (deviceSettings.ip[0] & deviceSettings.subnet[0]), ~deviceSettings.subnet[1] | (deviceSettings.ip[1] & deviceSettings.subnet[1]), ~deviceSettings.subnet[2] | (deviceSettings.ip[2] & deviceSettings.subnet[2]), ~deviceSettings.subnet[3] | (deviceSettings.ip[3] & deviceSettings.subnet[3])};
+
+      deviceSettings.broadcast = WiFi.broadcastIP();
+      //deviceSettings.broadcast = {~deviceSettings.subnet[0] | (deviceSettings.ip[0] & deviceSettings.subnet[0]), ~deviceSettings.subnet[1] | (deviceSettings.ip[1] & deviceSettings.subnet[1]), ~deviceSettings.subnet[2] | (deviceSettings.ip[2] & deviceSettings.subnet[2]), ~deviceSettings.subnet[3] | (deviceSettings.ip[3] & deviceSettings.subnet[3])};
     } else
       WiFi.config(deviceSettings.ip, deviceSettings.gateway, deviceSettings.subnet);
 
@@ -395,6 +400,11 @@ void wifiStart() {
     
   } else
     startHotspot();
+
+  #ifdef TEL_PORT
+    if (msgr != NULL)
+      msgr->sendMessage("WiFi AP connected to.");
+  #endif
   
   yield();
 }
